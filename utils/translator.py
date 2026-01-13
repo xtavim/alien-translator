@@ -3,6 +3,7 @@ import json
 import openai
 import os
 from dotenv import load_dotenv
+from langdetect import detect
 
 # Load environment variables
 load_dotenv()
