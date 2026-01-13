@@ -60,14 +60,9 @@ async def on_message(message):
     # Translate the message (handling links properly)
     translated = translate_message_with_links(message.content, target="en")
 
-    # If no translation is needed (English message), return without doing anything
-    if not translated:
-        return  # Skip if no translation needed
-
-    # Send the translation
-
-
-
+    # Skip if no translation is needed (English message, link-only, or other reason)
+    if translated is None:
+        return
 
     # Send to target channel
     target_channel = bot.get_channel(guild_cfg["target"])

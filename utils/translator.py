@@ -122,22 +122,23 @@ def translate_message_with_links(text, target="en"):
     """
     Translate a message that may contain links
 
-    If message contains only a link, returns original link
+    If message contains only a link, returns None (message is skipped)
     If message contains text with links, translates only the text parts
+    If message is in English, returns None (message is skipped)
 
     Args:
         text (str): Message text that may contain links
         target (str): Target language code (default: "en")
 
     Returns:
-        str: Translated message with original links preserved
+        str | None: Translated message with original links preserved, or None if no translation needed
     """
     print(f"DEBUG: translate_message_with_links() called with: '{text[:50]}...'")
 
-    # If it's just a link, return as-is
+    # If it's just a link, skip entirely
     if is_link_only(text):
-        print("DEBUG: Message is link only, returning as-is")
-        return text
+        print("DEBUG: Message is link only, skipping")
+        return None
 
     # Pattern to find URLs in the text
     url_pattern = re.compile(
@@ -168,10 +169,7 @@ def translate_message_with_links(text, target="en"):
     # If no links were found, just translate the whole message
     if not parts:
         print("DEBUG: No links found, translating entire message")
-        translated = translate(text, target)
-        if translated:  # Only return if translation actually happened
-            return translated
-        return None  # Return None for English text that wasn't translated
+        return translate(text, target)  # translate already returns None for English text
 
     # Translate text parts and keep links as-is
     result_parts = []
@@ -181,13 +179,20 @@ def translate_message_with_links(text, target="en"):
             if content.strip():
                 print(f"DEBUG: Translating text part: '{content[:30]}...'")
                 translated = translate(content, target)
-                result_parts.append(translated)
+                # If translation returns None (English text), don't include this part
+                if translated is not None:
+                    result_parts.append(translated)
+                # If no parts will be added (all English text), we'll return None at the end
             else:
                 print("DEBUG: Skipping empty text part")
-                result_parts.append(content)
         else:  # link
             print("DEBUG: Keeping link part as-is")
             result_parts.append(content)
+
+    # If we have no result parts (all text was English), return None
+    if not result_parts:
+        print("DEBUG: No translatable content, returning None")
+        return None
 
     result = "".join(result_parts)
     print(f"DEBUG: Final result: '{result[:50]}...'")
