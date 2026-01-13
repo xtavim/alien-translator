@@ -57,19 +57,17 @@ async def on_message(message):
     if message.channel.id != guild_cfg["source"]:
         return
 
-    # Detect the language of the message
-    detected_lang = detect(message.content)
-    print(f"DEBUG: Detected language: {detected_lang}")
-
-    # Skip translation for English, Portuguese, or Spanish
-    if detected_lang in ["en", "pt", "es"]:
-        print(f"DEBUG: Skipping translation for {detected_lang}")
-        return  # Skip if already in target language or other supported languages
-
     # Translate the message (handling links properly)
     translated = translate_message_with_links(message.content, target="en")
+
+    # If no translation is needed (English message), return without doing anything
     if not translated:
-        return  # Skip if translation failed
+        return  # Skip if no translation needed
+
+    # Send the translation
+
+
+
 
     # Send to target channel
     target_channel = bot.get_channel(guild_cfg["target"])

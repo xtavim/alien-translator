@@ -33,17 +33,17 @@ def translate(text, target="en"):
     # Check if text is empty
     if not text or not text.strip():
         print("DEBUG: Empty text, returning")
-        return text
+        return None
 
     # Skip translation only for English
     # First check if it's a link to avoid language detection errors
     if is_link_only(text):
         print("DEBUG: Text is a link, skipping language detection")
-        return text
+        return None
 
     if detect(text) in ["en"]:
-        print(f"DEBUG: Text is in English, returning as-is")
-        return text
+        print(f"DEBUG: Text is in English, returning None")
+        return None
 
     print("DEBUG: Translating text (assumed to be Swiss German dialect)")
 
@@ -106,7 +106,7 @@ def is_link_only(text):
 
     # Common URL patterns
     url_pattern = re.compile(
-        r'^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$'
+        r'^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$'
     )
 
     # Discord attachment pattern
@@ -141,7 +141,7 @@ def translate_message_with_links(text, target="en"):
 
     # Pattern to find URLs in the text
     url_pattern = re.compile(
-        r'(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)|https?:\/\/(?:cdn\.)?discord(?:app)?\.com\/attachments\/\d+\/\d+\/[^ ]+)'
+        r'(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)|https?:\/\/(?:cdn\.)?discord(?:app)?\.com\/attachments\/\d+\/\d+\/[^ ]+)'
     )
 
     # Split the text into parts (links and non-links)
@@ -168,7 +168,10 @@ def translate_message_with_links(text, target="en"):
     # If no links were found, just translate the whole message
     if not parts:
         print("DEBUG: No links found, translating entire message")
-        return translate(text, target)
+        translated = translate(text, target)
+        if translated:  # Only return if translation actually happened
+            return translated
+        return None  # Return None for English text that wasn't translated
 
     # Translate text parts and keep links as-is
     result_parts = []
