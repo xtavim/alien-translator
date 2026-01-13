@@ -35,9 +35,9 @@ def translate(text, target="en"):
         print("DEBUG: Empty text, returning")
         return text
 
-    # Skip translation for English, Portuguese, or Spanish
-    if detect(text) in ["en", "pt", "es"]:
-        print(f"DEBUG: Text is in supported language, returning as-is")
+    # Skip translation only for English
+    if detect(text) in ["en"]:
+        print(f"DEBUG: Text is in English, returning as-is")
         return text
 
     print("DEBUG: Translating text (assumed to be Swiss German dialect)")
@@ -51,8 +51,8 @@ def translate(text, target="en"):
         target = "en"
 
     try:
-        # Create a more specific system prompt for Swiss German translation
-        system_prompt = "Translate Swiss German/German to English. Preserve meaning and tone. Only return translation."
+        # Create a system prompt for translating Portuguese and Swiss German to English
+        system_prompt = "Translate Portuguese or Swiss German to English. Preserve meaning and tone. Only return translation."
         print(f"DEBUG: System prompt: {system_prompt}")
 
         # Call OpenAI API
