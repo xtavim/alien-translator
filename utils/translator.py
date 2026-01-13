@@ -36,6 +36,11 @@ def translate(text, target="en"):
         return text
 
     # Skip translation only for English
+    # First check if it's a link to avoid language detection errors
+    if is_link_only(text):
+        print("DEBUG: Text is a link, skipping language detection")
+        return text
+
     if detect(text) in ["en"]:
         print(f"DEBUG: Text is in English, returning as-is")
         return text
