@@ -41,6 +41,27 @@ def translate(text, target="en"):
         print("DEBUG: Text is a link, skipping language detection")
         return None
 
+    # Check for common English words first (before langdetect)
+    common_english_words = {
+        "hello", "hi", "hey", "bye", "ok", "yes", "no", "thanks", "please", "lol", "lmao",
+        "good", "bad", "nice", "cool", "awesome", "great", "wow", "omg", "wtf", "idk",
+        "what", "when", "where", "why", "how", "who", "this", "that", "these", "those",
+        "the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one",
+        "our", "out", "day", "get", "has", "him", "his", "how", "its", "may", "new", "now",
+        "old", "see", "two", "way", "who", "boy", "did", "didnt", "let", "put", "say", "she",
+        "too", "use"
+    }
+
+    text_clean = text.lower().strip()
+    words = text_clean.split()
+
+    # For short messages, check if most words are common English words
+    if len(words) <= 5 and words:
+        english_word_ratio = sum(1 for word in words if word in common_english_words) / len(words)
+        if english_word_ratio > 0.6:
+            print(f"DEBUG: Short text with mostly common English words, returning None")
+            return None
+
     # Use langdetect to determine if text needs translation
     try:
         detected_lang = detect(text)
