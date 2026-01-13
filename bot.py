@@ -4,7 +4,8 @@ from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
 
-from utils.translator import translate, translate_message_with_links, detect_language
+from utils.translator import translate, translate_message_with_links
+from langdetect import detect
 from utils.config_manager import ConfigManager
 
 # Load environment variables from .env file
