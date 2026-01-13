@@ -19,7 +19,7 @@ else:
 
 def translate(text, target="en"):
     """
-    Translates Swiss German/German text to English using OpenAI's GPT-5 mini
+    Translates text to English using OpenAI's GPT-5 mini
 
     Args:
         text (str): Text to translate
@@ -28,11 +28,18 @@ def translate(text, target="en"):
     Returns:
         str: Translated text or original text if translation fails
     """
-    print(f"DEBUG: translate() called with text: '{text[:50]}...' target: {target}")
 
+    # Check if text is empty
     if not text or not text.strip():
         print("DEBUG: Empty text, returning")
         return text
+
+    # Skip translation for English, Portuguese, or Spanish
+    if detect(text) in ["en", "pt", "es"]:
+        print(f"DEBUG: Text is in supported language, returning as-is")
+        return text
+
+    print("DEBUG: Translating text (assumed to be Swiss German dialect)")
 
     if not OPENAI_API_KEY:
         print("DEBUG: OpenAI API key not available, returning original text")

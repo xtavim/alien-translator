@@ -4,7 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
 
-from utils.translator import translate, translate_message_with_links
+from utils.translator import translate, translate_message_with_links, detect_language
 from utils.config_manager import ConfigManager
 
 # Load environment variables from .env file
@@ -56,8 +56,17 @@ async def on_message(message):
     if message.channel.id != guild_cfg["source"]:
         return
 
+    # Detect the language of the message
+    detected_lang = detect(message.content)
+    print(f"DEBUG: Detected language: {detected_lang}")
+
+    # Skip translation for English, Portuguese, or Spanish
+    if detected_lang in ["en", "pt", "es"]:
+        print(f"DEBUG: Skipping translation for {detected_lang}")
+        return  # Skip if already in target language or other supported languages
+
     # Translate the message (handling links properly)
-    translated = translate_message_with_links(message.content)
+    translated = translate_message_with_links(message.content, target="en")
     if not translated:
         return  # Skip if translation failed
 
