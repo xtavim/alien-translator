@@ -73,6 +73,10 @@ async def on_message(message):
 @bot.event
 async def on_ready():
     """Initialize bot when ready"""
+
+    activity = discord.Game(name="translating aliens 👽")
+    await bot.change_presence(activity=activity)
+
     print(f"Bot logged in as {bot.user.name}")
 
     guild = discord.Object(id=1255655420509294642)
