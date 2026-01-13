@@ -57,12 +57,17 @@ async def on_message(message):
     if message.channel.id != guild_cfg["source"]:
         return
 
+    print(f"DEBUG: Processing message from {message.author.display_name}: '{message.content[:50]}...'")
+
     # Translate the message (handling links properly)
     translated = translate_message_with_links(message.content, target="en")
 
     # Skip if no translation is needed (English message, link-only, or other reason)
     if translated is None:
+        print(f"DEBUG: Skipping message - no translation needed")
         return
+
+    print(f"DEBUG: Translated message: '{translated[:50]}...'")
 
     # Send to target channel
     target_channel = bot.get_channel(guild_cfg["target"])

@@ -41,9 +41,50 @@ def translate(text, target="en"):
         print("DEBUG: Text is a link, skipping language detection")
         return None
 
-    if detect(text) in ["en"]:
-        print(f"DEBUG: Text is in English, returning None")
+    # Optimized English detection with multiple strategies
+    text_clean = text.lower().strip()
+    words = text_clean.split()
+
+    # Strategy 1: Very short text with ASCII characters is likely English
+    if len(text_clean) <= 15 and text.isascii():
+        print(f"DEBUG: Short ASCII text detected, assuming English")
         return None
+
+    # Strategy 2: Check for common English words and patterns
+    common_english_words = {
+        "hello", "hi", "hey", "bye", "ok", "yes", "no", "thanks", "please", "lol", "lmao",
+        "good", "bad", "nice", "cool", "awesome", "great", "wow", "omg", "wtf", "idk",
+        "what", "when", "where", "why", "how", "who", "this", "that", "these", "those",
+        "the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one",
+        "our", "out", "day", "get", "has", "him", "his", "how", "its", "may", "new", "now",
+        "old", "see", "two", "way", "who", "boy", "did", "didnt", "let", "put", "say", "she",
+        "too", "use"
+    }
+
+    # For short messages, check if most words are common English words
+    if len(words) <= 5:
+        english_word_ratio = sum(1 for word in words if word in common_english_words) / len(words)
+        if english_word_ratio > 0.6:
+            print(f"DEBUG: Short text with mostly common English words, returning None")
+            return None
+
+    # Strategy 3: Check for non-English characters (Swiss German, Portuguese, etc.)
+    if not any(c in 'äöüßàáâãçèéêíóôõú' for c in text_clean) and text.isascii():
+        # ASCII-only text with no special characters is likely English
+        print(f"DEBUG: ASCII-only text with no non-English characters, assuming English")
+        return None
+
+    # Strategy 4: Use langdetect as a last resort for longer text
+    try:
+        detected_lang = detect(text)
+        if detected_lang in ["en"]:
+            print(f"DEBUG: Text is detected as English ({detected_lang}), returning None")
+            return None
+        else:
+            print(f"DEBUG: Text is detected as {detected_lang}, proceeding with translation")
+    except Exception as e:
+        print(f"DEBUG: Language detection error: {e}, proceeding with translation")
+        # If all else fails, proceed with translation
 
     print("DEBUG: Translating text (assumed to be Swiss German dialect)")
 
@@ -56,7 +97,12 @@ def translate(text, target="en"):
         target = "en"
 
     try:
-        # Create a system prompt for translating Portuguese and Swiss German to English
+        # Final safeguard: Check for extremely simple English patterns that might have slipped through
+        if len(text.split()) <= 2 and text.isascii() and not any(c in 'äöüßàáâãçèéêíóôõú' for c in text.lower()):
+            print(f"DEBUG: Very simple ASCII text detected, assuming English")
+            return None
+
+        # Create a system prompt for translating Portuguese or Swiss German to English
         system_prompt = "Translate Portuguese or Swiss German to English. Preserve meaning and tone. Only return translation."
         print(f"DEBUG: System prompt: {system_prompt}")
 
