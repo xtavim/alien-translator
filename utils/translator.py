@@ -58,14 +58,14 @@ def translate(text, target="en"):
     text_clean = text.lower().strip()
     words = text_clean.split()
 
-    # For short messages, check if most words are common English words
-    if len(words) <= 5 and words:
+    # Check if most words are common English words (for all message lengths)
+    if words:
         english_word_ratio = sum(1 for word in words if word in common_english_words) / len(words)
         if english_word_ratio > 0.6:
-            print(f"DEBUG: Short text with mostly common English words, returning None")
+            print(f"DEBUG: Text with mostly common English words, returning None")
             return None
 
-    # Use langdetect to determine if text needs translation
+    # Use langdetect to determine if text needs translation (only if common words check didn't catch it)
     try:
         detected_lang = detect(text)
         if detected_lang in ["en"]:
