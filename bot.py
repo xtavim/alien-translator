@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from utils.translator import translate, translate_message_with_links
 from langdetect import detect
 from utils.config_manager import ConfigManager
+from utils.queue_manager import TranslationQueueManager
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +23,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # Initialize config manager
 config_manager = ConfigManager(CONFIG_FILE)
 
+# Initialize queue manager (will be created in on_ready)
+queue_manager = None
+
 @bot.tree.command(name="settranslate", description="Set translation channels")
 @app_commands.checks.has_permissions(administrator=True)
 @app_commands.guild_only()
@@ -33,6 +37,110 @@ async def settranslate(interaction, source: discord.TextChannel, target: discord
     guild_id = str(interaction.guild.id)
     config_manager.set_guild_config(guild_id, source.id, target.id)
     await interaction.response.send_message(f"Translations set: {source.mention} → {target.mention}", ephemeral=True)
+
+@bot.tree.command(name="queuestatus", description="Check the translation queue status")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.guild_only()
+async def queuestatus(interaction):
+    """Shows the current status of the translation queue"""
+    global queue_manager
+
+    if not queue_manager:
+        await interaction.response.send_message("Queue manager not initialized", ephemeral=True)
+        return
+
+    queue_size = queue_manager.translation_queue.qsize()
+    worker_status = "Running" if queue_manager.worker_running else "Stopped"
+
+    embed = discord.Embed(
+        title="Translation Queue Status",
+        color=discord.Color.blue()
+    )
+
+    embed.add_field(name="Queue Size", value=f"{queue_size} messages waiting", inline=True)
+    embed.add_field(name="Worker Status", value=worker_status, inline=True)
+    embed.add_field(name="Rate Limit", value=f"{queue_manager.rate_limit_delay}s between translations", inline=True)
+
+    # Calculate approximate wait time
+    if queue_size > 0 and queue_manager.rate_limit_delay > 0:
+        wait_time = queue_size * queue_manager.rate_limit_delay
+        embed.add_field(name="Approx. Wait Time", value=f"{wait_time:.1f} seconds", inline=False)
+
+    # Add tips based on queue status
+    if queue_size > 10:
+        embed.set_footer(text="Consider increasing rate limit with /queuerate")
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.tree.command(name="queuerate", description="Adjust the rate limit between translations")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.guild_only()
+@app_commands.describe(
+    delay="Delay in seconds between API calls (default: 1.0)"
+)
+async def queuerate(interaction, delay: float = 1.0):
+    """Adjusts the rate limit for the translation queue"""
+    global queue_manager
+
+    if not queue_manager:
+        await interaction.response.send_message("Queue manager not initialized", ephemeral=True)
+        return
+
+    if delay < 0.1 or delay > 10.0:
+        await interaction.response.send_message("Delay must be between 0.1 and 10.0 seconds", ephemeral=True)
+        return
+
+    queue_manager.set_rate_limit(delay)
+    await interaction.response.send_message(f"Rate limit set to {delay}s between translations", ephemeral=True)
+
+@bot.tree.command(name="queueclear", description="Clear all pending translations")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.guild_only()
+async def queueclear(interaction):
+    """Clears all pending translations from the queue"""
+    global queue_manager
+
+    if not queue_manager:
+        await interaction.response.send_message("Queue manager not initialized", ephemeral=True)
+        return
+
+    queue_size = queue_manager.get_queue_size()
+    queue_manager.clear_queue()
+    await interaction.response.send_message(f"Cleared {queue_size} pending translations", ephemeral=True)
+
+@bot.tree.command(name="queuepause", description="Pause the translation queue")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.guild_only()
+async def queuepause(interaction):
+    """Pauses processing of the translation queue"""
+    global queue_manager
+
+    if not queue_manager:
+        await interaction.response.send_message("Queue manager not initialized", ephemeral=True)
+        return
+
+    if queue_manager.is_worker_running():
+        queue_manager.pause()
+        await interaction.response.send_message("Translation queue paused", ephemeral=True)
+    else:
+        await interaction.response.send_message("Translation queue is already paused", ephemeral=True)
+
+@bot.tree.command(name="queueresume", description="Resume the translation queue")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.guild_only()
+async def queueresume(interaction):
+    """Resumes processing of the translation queue"""
+    global queue_manager
+
+    if not queue_manager:
+        await interaction.response.send_message("Queue manager not initialized", ephemeral=True)
+        return
+
+    if not queue_manager.is_worker_running():
+        queue_manager.resume()
+        await interaction.response.send_message("Translation queue resumed", ephemeral=True)
+    else:
+        await interaction.response.send_message("Translation queue is already running", ephemeral=True)
 
 @bot.event
 async def on_message(message):
@@ -57,24 +165,10 @@ async def on_message(message):
     if message.channel.id != guild_cfg["source"]:
         return
 
-    print(f"DEBUG: Processing message from {message.author.display_name}: '{message.content[:50]}...'")
+    print(f"Adding message from {message.author.display_name} to translation queue: '{message.content[:50]}...'")
 
-    # Translate the message (handling links properly)
-    translated = translate_message_with_links(message.content, target="en")
-
-    # Skip if no translation is needed (English message, link-only, or other reason)
-    if translated is None:
-        print(f"DEBUG: Skipping message - no translation needed")
-        return
-
-    print(f"DEBUG: Translated message: '{translated[:50]}...'")
-
-    # Send to target channel
-    target_channel = bot.get_channel(guild_cfg["target"])
-    if target_channel:
-        await target_channel.send(f"**{message.author.display_name}:** {translated}")
-    else:
-        print(f"Could not find target channel with ID: {guild_cfg['target']}")
+    # Add message to the translation queue
+    queue_manager.add_message(message, guild_cfg)
 
     await bot.process_commands(message)
 
@@ -94,6 +188,11 @@ async def on_ready():
     print("Guild commands CLEARED")
 
     await bot.tree.sync()  # Sync commands with Discord
+
+    # Initialize and start the translation queue manager
+    global queue_manager
+    queue_manager = TranslationQueueManager(bot, CONFIG_FILE)
+    queue_manager.start()
 
 if not DISCORD_TOKEN:
     raise RuntimeError("DISCORD_TOKEN is not set")

@@ -3,5 +3,9 @@
     "source": 1460734456020341011,
     "target": 1460734487951314984,
     "enabled": true
+  },
+  "queueSettings": {
+    "rateLimitDelay": 1.0,
+    "autoStart": true
   }
 }

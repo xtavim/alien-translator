@@ -1,5 +1,6 @@
 import re
 import json
+import time
 import openai
 import os
 from dotenv import load_dotenv
@@ -29,6 +30,8 @@ def translate(text, target="en"):
     Returns:
         str: Translated text or original text if translation fails
     """
+    start_time = time.time()
+    print(f"TRANSLATE: Starting translation of '{text[:30]}...'")
 
     # Check if text is empty
     if not text or not text.strip():
@@ -108,7 +111,8 @@ def translate(text, target="en"):
         # Extract and return the translated text
         if response and response.choices:
             translated_text = response.choices[0].message.content.strip()
-            print(f"DEBUG: Translation result: '{translated_text[:50]}...'")
+            elapsed_time = time.time() - start_time
+            print(f"TRANSLATE: Completed in {elapsed_time:.2f}s - '{translated_text[:50]}...'")
             return translated_text
         else:
             print("DEBUG: No choices in response")
