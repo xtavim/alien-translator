@@ -54,7 +54,7 @@ async def queuestatus(interaction):
 
     embed = discord.Embed(
         title="Translation Queue Status",
-        color=discord.Color.blue()
+        color=interaction.user.color
     )
 
     embed.add_field(name="Queue Size", value=f"{queue_size} messages waiting", inline=True)

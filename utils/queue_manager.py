@@ -74,7 +74,7 @@ class TranslationQueueManager:
                 # Create an embed with user avatar, name, timestamp and translated message
                 embed = discord.Embed(
                     description=translated,
-                    color=discord.Color.blue(),
+                    color=job.message.author.color,
                     timestamp=job.message.created_at
                 )
                 embed.set_author(
