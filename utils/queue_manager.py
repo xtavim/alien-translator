@@ -98,14 +98,9 @@ class TranslationQueueManager:
                     else None,
                 )
 
-                # Display original message content with a link for navigation
-                original_content = job.message.content
-                if len(original_content) > 200:
-                    original_content = original_content[:200] + "..."
-
                 embed.add_field(
-                    name="Original Message",
-                    value=f"{original_content}\n\n[Jump to message]({job.message.jump_url})",
+                    name="",
+                    value=f"[Jump to original message]({job.message.jump_url})",
                     inline=False,
                 )
 
