@@ -1,8 +1,8 @@
-import re
-import json
-import time
-import openai
 import os
+import re
+import time
+
+import openai
 from dotenv import load_dotenv
 from langdetect import detect
 
@@ -18,6 +18,7 @@ if OPENAI_API_KEY:
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
 else:
     print("WARNING: OPENAI_API_KEY not found in environment variables")
+
 
 def translate(text, target="en"):
     """
@@ -46,13 +47,75 @@ def translate(text, target="en"):
 
     # Check for common English words first (before langdetect)
     common_english_words = {
-        "hello", "hi", "hey", "bye", "ok", "yes", "no", "thanks", "please", "lol", "lmao",
-        "good", "bad", "nice", "cool", "awesome", "great", "wow", "omg", "wtf", "idk",
-        "what", "when", "where", "why", "how", "who", "this", "that", "these", "those",
-        "the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one",
-        "our", "out", "day", "get", "has", "him", "his", "how", "its", "may", "new", "now",
-        "old", "see", "two", "way", "who", "boy", "did", "didnt", "let", "put", "say", "she",
-        "too", "use"
+        "hello",
+        "hi",
+        "hey",
+        "bye",
+        "ok",
+        "yes",
+        "no",
+        "thanks",
+        "please",
+        "lol",
+        "lmao",
+        "good",
+        "bad",
+        "nice",
+        "cool",
+        "awesome",
+        "great",
+        "wow",
+        "omg",
+        "wtf",
+        "idk",
+        "what",
+        "when",
+        "where",
+        "why",
+        "how",
+        "who",
+        "this",
+        "that",
+        "these",
+        "those",
+        "the",
+        "and",
+        "for",
+        "are",
+        "but",
+        "not",
+        "you",
+        "all",
+        "can",
+        "her",
+        "was",
+        "one",
+        "our",
+        "out",
+        "day",
+        "get",
+        "has",
+        "him",
+        "his",
+        "how",
+        "its",
+        "may",
+        "new",
+        "now",
+        "old",
+        "see",
+        "two",
+        "way",
+        "who",
+        "boy",
+        "did",
+        "didnt",
+        "let",
+        "put",
+        "say",
+        "she",
+        "too",
+        "use",
     }
 
     text_clean = text.lower().strip()
@@ -60,19 +123,25 @@ def translate(text, target="en"):
 
     # Check if most words are common English words (for all message lengths)
     if words:
-        english_word_ratio = sum(1 for word in words if word in common_english_words) / len(words)
+        english_word_ratio = sum(
+            1 for word in words if word in common_english_words
+        ) / len(words)
         if english_word_ratio > 0.6:
-            print(f"DEBUG: Text with mostly common English words, returning None")
+            print("DEBUG: Text with mostly common English words, returning None")
             return None
 
     # Use langdetect to determine if text needs translation (only if common words check didn't catch it)
     try:
         detected_lang = detect(text)
         if detected_lang in ["en"]:
-            print(f"DEBUG: Text is detected as English ({detected_lang}), returning None")
+            print(
+                f"DEBUG: Text is detected as English ({detected_lang}), returning None"
+            )
             return None
         else:
-            print(f"DEBUG: Text is detected as {detected_lang}, proceeding with translation")
+            print(
+                f"DEBUG: Text is detected as {detected_lang}, proceeding with translation"
+            )
     except Exception as e:
         print(f"DEBUG: Language detection error: {e}, proceeding with translation")
         # If language detection fails, proceed with translation
@@ -88,9 +157,8 @@ def translate(text, target="en"):
         target = "en"
 
     try:
-
         # Create a system prompt for translating Portuguese or Swiss German to English
-        system_prompt = "Translate Portuguese or Swiss German to English. Preserve meaning and tone. Only return translation."
+        system_prompt = "Translate non-English text to English. For English/slang (jk, gg, lol, etc.), return unchanged. Only return translation or original text."
         print(f"DEBUG: System prompt: {system_prompt}")
 
         # Call OpenAI API
@@ -103,16 +171,18 @@ def translate(text, target="en"):
             model="gpt-5-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
+                {"role": "user", "content": text},
             ],
-            max_completion_tokens=1000  # Adjust based on expected message length
+            max_completion_tokens=1000,  # Adjust based on expected message length
         )
 
         # Extract and return the translated text
-        if response and response.choices:
+        if response and response.choices and response.choices[0].message.content:
             translated_text = response.choices[0].message.content.strip()
             elapsed_time = time.time() - start_time
-            print(f"TRANSLATE: Completed in {elapsed_time:.2f}s - '{translated_text[:50]}...'")
+            print(
+                f"TRANSLATE: Completed in {elapsed_time:.2f}s - '{translated_text[:50]}...'"
+            )
             return translated_text
         else:
             print("DEBUG: No choices in response")
@@ -121,8 +191,10 @@ def translate(text, target="en"):
     except Exception as e:
         print(f"DEBUG: Translation error: {e}")
         import traceback
+
         traceback.print_exc()
         return text  # Return original text if translation fails
+
 
 def is_link_only(text):
     """
@@ -140,17 +212,18 @@ def is_link_only(text):
 
     # Common URL patterns
     url_pattern = re.compile(
-        r'^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$'
+        r"^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)$"
     )
 
     # Discord attachment pattern
     discord_attachment_pattern = re.compile(
-        r'^https?:\/\/(?:cdn\.)?discord(?:app)?\.com\/attachments\/\d+\/\d+\/[^ ]+$'
+        r"^https?:\/\/(?:cdn\.)?discord(?:app)?\.com\/attachments\/\d+\/\d+\/[^ ]+$"
     )
 
     result = bool(url_pattern.match(text) or discord_attachment_pattern.match(text))
     print(f"DEBUG: is_link_only() result: {result}")
     return result
+
 
 def translate_message_with_links(text, target="en"):
     """
@@ -176,7 +249,7 @@ def translate_message_with_links(text, target="en"):
 
     # Pattern to find URLs in the text
     url_pattern = re.compile(
-        r'(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)|https?:\/\/(?:cdn\.)?discord(?:app)?\.com\/attachments\/\d+\/\d+\/[^ ]+)'
+        r"(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*)|https?:\/\/(?:cdn\.)?discord(?:app)?\.com\/attachments\/\d+\/\d+\/[^ ]+)"
     )
 
     # Split the text into parts (links and non-links)
@@ -186,7 +259,7 @@ def translate_message_with_links(text, target="en"):
     for match in url_pattern.finditer(text):
         # Add the text before the link
         if last_end < match.start():
-            parts.append(("text", text[last_end:match.start()]))
+            parts.append(("text", text[last_end : match.start()]))
 
         # Add the link
         parts.append(("link", match.group(0)))
@@ -203,7 +276,9 @@ def translate_message_with_links(text, target="en"):
     # If no links were found, just translate the whole message
     if not parts:
         print("DEBUG: No links found, translating entire message")
-        return translate(text, target)  # translate already returns None for English text
+        return translate(
+            text, target
+        )  # translate already returns None for English text
 
     # Translate text parts and keep links as-is
     result_parts = []

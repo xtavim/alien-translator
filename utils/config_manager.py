@@ -1,5 +1,5 @@
 import json
-import os
+
 
 class ConfigManager:
     def __init__(self, config_file_path):
@@ -26,11 +26,13 @@ class ConfigManager:
         """Get configuration for a specific guild"""
         return self.config.get(str(guild_id))
 
-    def set_guild_config(self, guild_id, source_channel_id, target_channel_id, enabled=True):
+    def set_guild_config(
+        self, guild_id, source_channel_id, target_channel_id, enabled=True
+    ):
         """Set configuration for a specific guild"""
         self.config[str(guild_id)] = {
             "source": source_channel_id,
             "target": target_channel_id,
-            "enabled": enabled
+            "enabled": enabled,
         }
         self.save_config()

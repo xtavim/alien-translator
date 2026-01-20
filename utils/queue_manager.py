@@ -2,9 +2,12 @@ import asyncio
 import json
 import threading
 import time
-from queue import Queue, Empty
+from queue import Empty, Queue
+
 import discord
+
 from .translator import translate_message_with_links
+
 
 class TranslationQueueManager:
     """Manages a queue of translation jobs to ensure messages are processed in order.
@@ -18,10 +21,13 @@ class TranslationQueueManager:
         self.worker_running = False
         self.worker_thread = None
         self.config_file = config_file
-        self.rate_limit_delay = self._load_config().get("rateLimitDelay", 1.0)  # Default 1.0s delay
+        self.rate_limit_delay = self._load_config().get(
+            "rateLimitDelay", 1.0
+        )  # Default 1.0s delay
 
     class MessageJob:
         """Represents a translation job for a message"""
+
         def __init__(self, message, guild_cfg):
             self.message = message
             self.guild_cfg = guild_cfg
@@ -33,8 +39,12 @@ class TranslationQueueManager:
         self.translation_queue.put(job)
 
         # Start worker thread if not already running
-        if not self.worker_running or (self.worker_thread and not self.worker_thread.is_alive()):
-            self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
+        if not self.worker_running or (
+            self.worker_thread and not self.worker_thread.is_alive()
+        ):
+            self.worker_thread = threading.Thread(
+                target=self._process_queue, daemon=True
+            )
             self.worker_thread.start()
 
         return job
@@ -58,14 +68,18 @@ class TranslationQueueManager:
 
                 # Process the translation
                 # NOTE: This blocks until complete, ensuring order is maintained
-                print(f"Processing message from {job.message.author.display_name}: '{job.message.content[:50]}...'")
+                print(
+                    f"Processing message from {job.message.author.display_name}: '{job.message.content[:50]}...'"
+                )
 
                 # Translate the message (handling links properly)
-                translated = translate_message_with_links(job.message.content, target="en")
+                translated = translate_message_with_links(
+                    job.message.content, target="en"
+                )
 
                 # Skip if no translation is needed (English message, link-only, or other reason)
                 if translated is None:
-                    print(f"Skipping message - no translation needed")
+                    print("Skipping message - no translation needed")
                     self.translation_queue.task_done()
                     continue
 
@@ -75,11 +89,24 @@ class TranslationQueueManager:
                 embed = discord.Embed(
                     description=translated,
                     color=job.message.author.color,
-                    timestamp=job.message.created_at
+                    timestamp=job.message.created_at,
                 )
                 embed.set_author(
                     name=job.message.author.display_name,
-                    icon_url=job.message.author.display_avatar.url if job.message.author.display_avatar else None
+                    icon_url=job.message.author.display_avatar.url
+                    if job.message.author.display_avatar
+                    else None,
+                )
+
+                # Display original message content with a link for navigation
+                original_content = job.message.content
+                if len(original_content) > 200:
+                    original_content = original_content[:200] + "..."
+
+                embed.add_field(
+                    name="Original Message",
+                    value=f"{original_content}\n\n[Jump to message]({job.message.jump_url})",
+                    inline=False,
                 )
 
                 # Send to target channel
@@ -87,11 +114,12 @@ class TranslationQueueManager:
                 if target_channel:
                     # Use asyncio to send message from this thread to Discord
                     asyncio.run_coroutine_threadsafe(
-                        target_channel.send(embed=embed),
-                        self.bot.loop
+                        target_channel.send(embed=embed), self.bot.loop
                     )
                 else:
-                    print(f"Could not find target channel with ID: {job.guild_cfg['target']}")
+                    print(
+                        f"Could not find target channel with ID: {job.guild_cfg['target']}"
+                    )
 
                 # Mark job as done
                 self.translation_queue.task_done()
@@ -109,15 +137,19 @@ class TranslationQueueManager:
                 # Mark job as done even if there was an error
                 try:
                     self.translation_queue.task_done()
-                except:
+                except Exception:
                     pass
 
         print("Translation queue worker stopped")
 
     def start(self):
         """Start the queue worker if not already running"""
-        if not self.worker_running or (self.worker_thread and not self.worker_thread.is_alive()):
-            self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
+        if not self.worker_running or (
+            self.worker_thread and not self.worker_thread.is_alive()
+        ):
+            self.worker_thread = threading.Thread(
+                target=self._process_queue, daemon=True
+            )
             self.worker_thread.start()
 
     def stop(self):
@@ -151,9 +183,7 @@ class TranslationQueueManager:
             config = {}
 
         # Update queue settings
-        config["queueSettings"] = {
-            "rateLimitDelay": self.rate_limit_delay
-        }
+        config["queueSettings"] = {"rateLimitDelay": self.rate_limit_delay}
 
         try:
             with open(self.config_file, "w") as f:
@@ -184,8 +214,12 @@ class TranslationQueueManager:
 
     def resume(self):
         """Resume processing of the queue"""
-        if not self.worker_running or (self.worker_thread and not self.worker_thread.is_alive()):
-            self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
+        if not self.worker_running or (
+            self.worker_thread and not self.worker_thread.is_alive()
+        ):
+            self.worker_thread = threading.Thread(
+                target=self._process_queue, daemon=True
+            )
             self.worker_thread.start()
         print("Translation queue resumed")
 
@@ -195,18 +229,6 @@ class TranslationQueueManager:
 
     def is_worker_running(self):
         """Check if the worker thread is currently running"""
-        return self.worker_running and (self.worker_thread and self.worker_thread.is_alive())
-
-    def get_queue_order(self, max_items=10):
-        """Get a snapshot of the current queue order for debugging
-        Returns a list of message author names and content previews
-        """
-        queue_items = []
-
-        # Create a copy of the queue to inspect without modifying it
-        # We need to be careful here as we're accessing a thread-safe queue
-        with self.translation_queue.mutex:
-            # Get a snapshot of the queue
-            queue_snapshot = list(self.translation_queue.queue)
-
-            # Extract limited
+        return self.worker_running and (
+            self.worker_thread and self.worker_thread.is_alive()
+        )
