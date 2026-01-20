@@ -3,6 +3,7 @@ import json
 import threading
 import time
 from queue import Queue, Empty
+import discord
 from .translator import translate_message_with_links
 
 class TranslationQueueManager:
@@ -70,12 +71,23 @@ class TranslationQueueManager:
 
                 print(f"Translated message: '{translated[:50]}...'")
 
+                # Create an embed with user avatar, name, timestamp and translated message
+                embed = discord.Embed(
+                    description=translated,
+                    color=discord.Color.blue(),
+                    timestamp=job.message.created_at
+                )
+                embed.set_author(
+                    name=job.message.author.display_name,
+                    icon_url=job.message.author.display_avatar.url if job.message.author.display_avatar else None
+                )
+
                 # Send to target channel
                 target_channel = self.bot.get_channel(job.guild_cfg["target"])
                 if target_channel:
                     # Use asyncio to send message from this thread to Discord
                     asyncio.run_coroutine_threadsafe(
-                        target_channel.send(f"**{job.message.author.display_name}:** {translated}"),
+                        target_channel.send(embed=embed),
                         self.bot.loop
                     )
                 else:
@@ -184,17 +196,17 @@ class TranslationQueueManager:
     def is_worker_running(self):
         """Check if the worker thread is currently running"""
         return self.worker_running and (self.worker_thread and self.worker_thread.is_alive())
-        
+
     def get_queue_order(self, max_items=10):
         """Get a snapshot of the current queue order for debugging
         Returns a list of message author names and content previews
         """
         queue_items = []
-        
+
         # Create a copy of the queue to inspect without modifying it
         # We need to be careful here as we're accessing a thread-safe queue
         with self.translation_queue.mutex:
             # Get a snapshot of the queue
             queue_snapshot = list(self.translation_queue.queue)
-            
+
             # Extract limited
